@@ -80,6 +80,13 @@ RUN apt-get update && apt-get install -yq --fix-missing \
     php-geos \
     php-xdebug php-imagick imagemagick nginx
 
+RUN apt-get install composer -y
+RUN composer global require hirak/prestissimo
+RUN apt-get install -y autoconf zlib1g-dev php-dev php-pear
+RUN pecl install grpc-1.18.0
+RUN sed -i "`wc -l < /etc/php/7.4/cli/php.ini`i\\extension=grpc.so\\" /etc/php/7.4/cli/php.ini
+
+
 RUN update-alternatives --set php /usr/bin/php7.4
 RUN update-alternatives --set phar /usr/bin/phar7.4
 RUN update-alternatives --set phar.phar /usr/bin/phar.phar7.4
@@ -90,17 +97,6 @@ RUN apt-get update && apt-get install -yq --fix-missing mc lynx mysql-client bzi
 # Install Redis, Memcached, Beanstalk
 RUN apt-get update && apt-get install -yq --fix-missing redis-server memcached beanstalkd
 
-ENV COMPOSER_HOME /usr/local/share/composer
-ENV COMPOSER_ALLOW_SUPERUSER 1
-ENV PATH "$COMPOSER_HOME:$COMPOSER_HOME/vendor/bin:$PATH"
-RUN \
-  mkdir -pv $COMPOSER_HOME && chmod -R g+w $COMPOSER_HOME \
-  && curl -o /tmp/composer-setup.php https://getcomposer.org/installer \
-  && curl -o /tmp/composer-setup.sig https://composer.github.io/installer.sig \
-  && php -r "if (hash('SHA384', file_get_contents('/tmp/composer-setup.php')) \
-    !== trim(file_get_contents('/tmp/composer-setup.sig'))) { unlink('/tmp/composer-setup.php'); \
-    echo 'Invalid installer' . PHP_EOL; exit(1); }" \
-  && php /tmp/composer-setup.php --filename=composer --install-dir=$COMPOSER_HOME 
 
 ADD commands/xvfb.init.sh /etc/init.d/xvfb 
 
@@ -165,8 +161,6 @@ RUN apt-get update && apt-get install -yq --fix-missing supervisor
 ADD configs/supervisord.conf /etc/supervisor/supervisord.conf
 
 ADD configs/nginx-default-site /etc/nginx/sites-available/default 
-
-RUN composer global require hirak/prestissimo
 
 RUN npm set progress=false
 RUN mkdir /run/php
